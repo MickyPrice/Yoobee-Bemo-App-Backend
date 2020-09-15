@@ -1,29 +1,33 @@
-let express = require('express');
-let app = express();
-let passport = require('passport');
-let passportCustom = require('passport-custom');
+const express = require('express');
+const app = express();
+const passport = require('passport');
 const cors = require("cors");
-
-// Prevent CORS permission errors
-app.use(cors());
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
+
+// App Configuration
+app.use(express.static('public'));
+app.use(express.json());
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(cors());
 dotenv.config();
 
-const isProduction = false;
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
+passport.deserializeUser(function(user, done) {
+  done(null, user);
+});
 
-// Parse JSON
-app.use(express.json());
+
 
 // Auth Routes
 const authRoute = require("./routes/auth/auth.js")
 app.use("/auth", authRoute);
 
-
-
-
-
-app.listen(3000, () => {  // Start listening once DB connection is made
+// Server Listener
+app.listen(3000, () => { 
   console.log("Listening on port 3000...");
 });
 
