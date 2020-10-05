@@ -5,6 +5,7 @@ const newConnection = (socket, user) => {
     socketId: socket,
     username: user.username,
     img: user.picture,
+    _id: user.id
   };
 };
 

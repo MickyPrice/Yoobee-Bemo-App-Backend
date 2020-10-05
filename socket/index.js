@@ -1,7 +1,7 @@
 // Socket.io
 const Channel = require("../models/Channel.js");
 const { init } = require("./init.js");
-const { createChannel } = require("./channel.js");
+const { createChannel, getDirectChannel } = require("./channel.js");
 const { newMessage, getMsgs } = require("./chat.js");
 
 const {
@@ -35,6 +35,11 @@ const socket = (io) => {
 
     socket.on("createChannel", (request) => {
       createChannel(io, socket, request);
+    });
+
+    socket.on("getDirectChannel", (request) => {
+      console.log("Get Direct")
+      getDirectChannel(socket, request);
     });
 
     /**

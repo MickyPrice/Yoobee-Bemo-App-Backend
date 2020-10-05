@@ -57,6 +57,25 @@ const updateUsers = (users, channel) => {
 };
 
 /**
+ * Get a direct channel or if one dosent exsist create one
+ * 
+ * @param { String } userId
+ */
+const getDirectChannel = (socket, userId) => {
+  Channel.find({ members: userId, direct: true }).then((channel) => {
+    if(channel.length == 0){
+      const newChannel = new Channel({
+        members: [userId, socket.request.user._id],
+        direct: true
+      }).save()
+      console.log(newChannel)
+    } else {
+      console.log("YES CHAT")
+    }
+  });
+}
+
+/**
  * Create new channel & update online users
  *
  * @param { Object } io - Socket.io instance
@@ -84,4 +103,5 @@ const createChannel = (io, socket, request) => {
 module.exports = {
   updateChannel,
   createChannel,
+  getDirectChannel
 };
