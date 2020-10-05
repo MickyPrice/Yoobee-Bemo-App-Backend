@@ -1,17 +1,19 @@
+const { getConnections } = require("../utils/socketConnections.js");
+const { newMessage } = require("./chat.js");
 const User = require("../models/User.js");
 const Transaction = require("../models/Transaction.js");
 const Payment = require("../models/Payment.js");
 const mongoose = require("mongoose");
+const socket = require("./index.js");
 
-const createTransaction = async (paymentId) => {
+const createTransaction = async (paymentId, sourceId) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-
     // Get the current payment
     const payment = await Payment.findOne({
-      _id: paymentId
+      _id: paymentId,
     }).session(session);
 
     if (!payment) {
@@ -29,12 +31,12 @@ const createTransaction = async (paymentId) => {
       destination: null,
       status: null,
       payment: null,
-      amount: payment.amount
+      amount: payment.amount,
     });
 
     // Get the current users most uptodate balance
     const source = await User.findOne({
-      _id: "5f62876441576b09957f511b",
+      _id: sourceId,
     }).session(session);
 
     // If the user account dosent exist throw an error
@@ -54,7 +56,7 @@ const createTransaction = async (paymentId) => {
       );
     }
 
-    // Save the updated source into the session  
+    // Save the updated source into the session
     await source.save();
 
     // Get the destination user
@@ -89,20 +91,69 @@ const createTransaction = async (paymentId) => {
     await session.commitTransaction();
 
     return transaction;
-
   } catch (error) {
-
     // Abort the transaction
     await session.abortTransaction();
     return {
-      error: error
-    }
+      error: error,
+    };
   } finally {
     // End the session
     session.endSession();
   }
-}
+};
+
+/**
+ *
+ * @param {*} io
+ * @param {*} socket
+ * @param {*} request
+ */
+const createPayment = (io, socket, request) => {
+    
+  if (
+    (request.mode == "SEND" || request.mode == "REQUEST") && request.actor && !isNaN(request.amount)
+  ) {
+    const paymentObject = {
+      source: request.mode == "SEND" ? socket.request.user._id : request.actor,
+      destination: request.mode == "SEND" ? request.actor : socket.request.user._id,
+      amount: request.amount,
+      paymentType: "BEMO"
+    };
+    const payment = new Payment(paymentObject);
+    payment
+      .save()
+      .then((data) => {          
+        return socket.emit("paymentResponse", data._id);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  } else {
+      console.error("Missing data");
+  }
+};
+
+/**
+ *
+ * @param {*} io
+ * @param {*} socket
+ * @param {*} request
+ */
+const fufillPayment = (io, socket, request) => {
+  console.log(
+    createTransaction(request.payment, socket.request.user._id)
+      .then((data) => {
+        console.log("DATA", data);
+      })
+      .catch((err) => {
+        "ERROR", err;
+      })
+  );
+  // console.log(request.payment);
+};
 
 module.exports = {
-  createTransaction
+  fufillPayment,
+  createPayment,
 };

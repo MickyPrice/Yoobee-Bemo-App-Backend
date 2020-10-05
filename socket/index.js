@@ -9,6 +9,7 @@ const {
   destroyConnection,
   getUsers,
 } = require("../utils/socketConnections.js");
+const { fufillPayment, createPayment } = require("./transaction.js");
 
 const socket = (io) => {
   io.on("connection", async (socket) => {
@@ -61,13 +62,35 @@ const socket = (io) => {
 
       io.emit("updateChannel", {
         _id: channel._id,
-        length: channel.messages.length
+        length: channel.messages.length,
       });
     });
 
     socket.on("getMsgs", (options) => {
       getMsgs(io, options);
-    })
+    });
+
+    /**
+     * Listen for a socket fufillRequest event
+     *
+     * @param {object} request - payment fufillment request
+     * @typedef {{ channel: objectId, content: string, contentType: string}}
+     */
+
+    socket.on("fufillRequest", (request) => {
+      fufillPayment(io, socket, request);
+    });
+
+    /**
+     * Listen for a socket chatMessage event
+     *
+     * @param {object} request - chat message object
+     * @typedef {{ channel: objectId, content: string, contentType: string}}
+     */
+
+    socket.on("payment", (request) => {
+      createPayment(io, socket, request);
+    });
 
     /**
      * Listen for a socket leaveChannel event
