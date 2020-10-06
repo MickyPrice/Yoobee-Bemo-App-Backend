@@ -26,6 +26,7 @@ const updateChannel = async (io, channel) => {
 
   if (channelData) {
     const currentMemebers = getConnections(members);
+    console.log(currentMemebers)
     updateCurrentUsers(io, currentMemebers, channelData);
   }
 };
@@ -82,8 +83,7 @@ const updateUsers = (users, channel) => {
  * @param { String } userId
  */
 const getDirectChannel = async (io, socket, userId) => {
-  console.log([userId, socket.request.user._id])
-  const channel = await Channel.find({ members: { $in: [userId, socket.request.user._id] }, direct: true });
+  const channel = await Channel.find({ members: { $all: [userId, socket.request.user._id] }, direct: true });
 
   if (channel.length == 0) {
 
@@ -92,11 +92,7 @@ const getDirectChannel = async (io, socket, userId) => {
       direct: true,
     }).save();
 
-    console.log(newChannel)
-
-    let updateUser = await User.findById(socket.request.user._id);
-    await updateUser.channels.push(newChannel._id)
-    updateUser.save();
+    await User.updateMany({ _id: { $in: [socket.request.user._id, userId] } }, { "$push": { "channels": newChannel._id } });
 
     socket.emit("openChannel", newChannel._id);
   } else {

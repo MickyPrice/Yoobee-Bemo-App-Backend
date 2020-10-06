@@ -30,11 +30,11 @@ const newMessage = async (io, socket, request) => {
   updateChannel(io, request.channel);
 };
 
-const getMsgs = async (io, options) => {
+const getMsgs = async (socket, options) => {
   const channel = await Channel.findById(options.channelId);
   const msgSum = await channel.messages.length
   const messages = channel.messages.splice(- options.num -20 , 20).reverse();
-  io.to(options.channelId).emit("reciveMsgs", {
+  socket.emit("reciveMsgs", {
     msgs: messages, 
     length: msgSum
 })};

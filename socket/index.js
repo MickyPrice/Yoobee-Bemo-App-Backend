@@ -63,7 +63,7 @@ const socket = (io) => {
     });
 
     socket.on("getMsgs", (options) => {
-      getMsgs(io, options);
+      getMsgs(socket, options);
     })
 
     /**
