@@ -26,7 +26,8 @@ const newMessage = async (io, socket, request) => {
     msg: message,
     length: channel.messages.length
   });
-  updateChannel(io, socket, request.channel);
+
+  updateChannel(io, request.channel);
 };
 
 const getMsgs = async (io, options) => {

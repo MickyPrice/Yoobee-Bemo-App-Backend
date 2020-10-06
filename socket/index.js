@@ -38,8 +38,7 @@ const socket = (io) => {
     });
 
     socket.on("getDirectChannel", (request) => {
-      console.log("Get Direct")
-      getDirectChannel(socket, request);
+      getDirectChannel(io, socket, request);
     });
 
     /**
@@ -61,13 +60,6 @@ const socket = (io) => {
 
     socket.on("joinChannel", async (channelId) => {
       socket.join(channelId);
-
-      const channel = await Channel.findById(channelId);
-
-      io.emit("updateChannel", {
-        _id: channel._id,
-        length: channel.messages.length
-      });
     });
 
     socket.on("getMsgs", (options) => {

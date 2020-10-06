@@ -10,15 +10,24 @@ const { getConnections } = require("../utils/socketConnections.js");
  * @param { String } channel - channel id as string
  */
 
-const updateChannel = (io, socket, channel) => {
-  Channel.findOne(
+const updateChannel = async (io, channel) => {
+  const channelData = await Channel.findOne(
     { _id: channel },
-    { messages: { $slice: -1 }, members: 1 },
-    (err, channelData) => {
-      const currentMemebers = getConnections(channelData.members);
-      updateCurrentUsers(io, currentMemebers, channelData);
-    }
+    { messages: 1, members: 1, updatedAt: 1 }
   );
+  const members = channelData.members;
+  await channelData
+    .populate({
+      path: "members",
+      model: "User",
+      select: "username fullname picture",
+    })
+    .execPopulate();
+
+  if (channelData) {
+    const currentMemebers = getConnections(members);
+    updateCurrentUsers(io, currentMemebers, channelData);
+  }
 };
 
 /**
@@ -34,8 +43,19 @@ const updateCurrentUsers = (io, sockets, channel) => {
     io.to(socket.socketId).emit("updateChannel", {
       id: channel._id,
       data: {
-        members: channel.members,
-        messages: channel.messages.slice(-1)[0],
+        length: channel.messages.length,
+        latestMsg: channel.messages.slice(-1)[0],
+        updatedAt: channel.updatedAt,
+        members: Object.assign(
+          {},
+          ...channel.members.map((member) => ({
+            [member._id]: {
+              photo: member.photo,
+              username: member.username,
+              fullname: member.fullname,
+            },
+          }))
+        ),
       },
     });
   });
@@ -58,22 +78,31 @@ const updateUsers = (users, channel) => {
 
 /**
  * Get a direct channel or if one dosent exsist create one
- * 
+ *
  * @param { String } userId
  */
-const getDirectChannel = (socket, userId) => {
-  Channel.find({ members: userId, direct: true }).then((channel) => {
-    if(channel.length == 0){
-      const newChannel = new Channel({
-        members: [userId, socket.request.user._id],
-        direct: true
-      }).save()
-      console.log(newChannel)
-    } else {
-      console.log("YES CHAT")
-    }
-  });
-}
+const getDirectChannel = async (io, socket, userId) => {
+  console.log([userId, socket.request.user._id])
+  const channel = await Channel.find({ members: { $in: [userId, socket.request.user._id] }, direct: true });
+
+  if (channel.length == 0) {
+
+    const newChannel = await new Channel({
+      members: [userId, socket.request.user._id],
+      direct: true,
+    }).save();
+
+    console.log(newChannel)
+
+    let updateUser = await User.findById(socket.request.user._id);
+    await updateUser.channels.push(newChannel._id)
+    updateUser.save();
+
+    socket.emit("openChannel", newChannel._id);
+  } else {
+    socket.emit("openChannel", channel[0]._id);
+  }
+};
 
 /**
  * Create new channel & update online users
@@ -103,5 +132,5 @@ const createChannel = (io, socket, request) => {
 module.exports = {
   updateChannel,
   createChannel,
-  getDirectChannel
+  getDirectChannel,
 };

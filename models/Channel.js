@@ -9,6 +9,7 @@ const ChannelSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    direct: { type: Boolean, default: false },
     messages: [
       {
         status: {
@@ -16,7 +17,6 @@ const ChannelSchema = new mongoose.Schema(
           enum: ["SENDING", "SENT", "RECIEVED"],
           default: "SENDING",
         },
-        direct: { type: Boolean },
         content: { type: Object, required: true },
         contentType: {
           type: String,
