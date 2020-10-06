@@ -49,13 +49,6 @@ const createTransaction = async (paymentId, sourceId) => {
     // Update the users balance
     source.balance = source.balance - payment.amount;
 
-    // If funds are insufficient, the transfer cannot be processed
-    if (source.balance >= 0) {
-      throw new Error(
-        `You have insufficient funds to complete this transaction`
-      );
-    }
-
     // Save the updated source into the session
     await source.save();
 
@@ -71,10 +64,11 @@ const createTransaction = async (paymentId, sourceId) => {
     transaction.destination = destination;
 
     // Update the destination user's balance
-    if (destination.balance != null) {
+    if (source.balance >= payment.amount) {
       destination.balance = destination.balance + payment.amount;
+      source.balance = source.balance - payment.amount;
     } else {
-      destination.balance = payment.amount;
+      throw new Error("You have insufficient funds to complete this transaction");
     }
 
     // Save the updated destination
@@ -110,7 +104,7 @@ const createTransaction = async (paymentId, sourceId) => {
  * @param {*} request
  */
 const createPayment = (io, socket, request) => {
-    
+
   if (
     (request.mode == "SEND" || request.mode == "REQUEST") && request.actor && !isNaN(request.amount)
   ) {
@@ -123,14 +117,13 @@ const createPayment = (io, socket, request) => {
     const payment = new Payment(paymentObject);
     payment
       .save()
-      .then((data) => {          
+      .then((data) => {
+        // TODO: Send messages to appropriate channels
+        console.log(data);
         return socket.emit("paymentResponse", data._id);
       })
-      .catch((err) => {
-        console.error(err);
-      });
   } else {
-      console.error("Missing data");
+    console.error("Missing data");
   }
 };
 
@@ -141,15 +134,14 @@ const createPayment = (io, socket, request) => {
  * @param {*} request
  */
 const fufillPayment = (io, socket, request) => {
-  console.log(
-    createTransaction(request.payment, socket.request.user._id)
-      .then((data) => {
+  createTransaction(request.payment, socket.request.user._id)
+    .then((data) => {
+      if (!data.error) {
         console.log("DATA", data);
-      })
-      .catch((err) => {
-        "ERROR", err;
-      })
-  );
+      } else {
+        console.log("ERROR", data.error)
+      }
+    });
   // console.log(request.payment);
 };
 
