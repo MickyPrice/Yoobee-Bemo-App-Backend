@@ -7,15 +7,12 @@ const socket = require("./index.js");
 const getUsersBeginWith = (io, socket, query) => {
     query = query.replace(/\W/g, '');
     var regexp = new RegExp("^" + query, "i");
-    console.log(regexp);
-    User.find({ username: regexp}).then((data) => {
-        console.log("DATA", data);
+    User.find({ $or: [{ username: regexp }, { fullname: regexp }] }).then((data) => {
         socket.emit("userSearchResponse", data);
     }).catch((err) => {
         console.log("ERR", err);
     });
 }
-
 module.exports = {
     getUsersBeginWith
 }
