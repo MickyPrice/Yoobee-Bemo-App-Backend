@@ -10,6 +10,7 @@ const {
   getUsers,
 } = require("../utils/socketConnections.js");
 const { fufillPayment, createPayment } = require("./transaction.js");
+const { getUsersBeginWith } = require("./user.js");
 
 const socket = (io) => {
   io.on("connection", async (socket) => {
@@ -85,12 +86,23 @@ const socket = (io) => {
      * Listen for a socket chatMessage event
      *
      * @param {object} request - chat message object
-     * @typedef {{ channel: objectId, content: string, contentType: string}}
      */
 
     socket.on("payment", (request) => {
       createPayment(io, socket, request);
     });
+
+    /**
+     * Listen for a socket searchUser event
+     *
+     * @param {object} request - Search query
+     */
+
+    socket.on("searchUser", (query) => {
+      getUsersBeginWith(io, socket, query);
+    });
+
+    
 
     /**
      * Listen for a socket leaveChannel event

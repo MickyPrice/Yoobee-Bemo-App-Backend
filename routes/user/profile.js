@@ -66,10 +66,6 @@ router.get("/:userId", (req, res, next) => {
                     'Content-Length': img.length
                 });
                 res.end(img);
-
-
-
-                return res.send(contents.msg).status(contents.status);
             }
         })
         .catch((err) => {
