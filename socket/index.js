@@ -11,9 +11,10 @@ const {
 } = require("../utils/socketConnections.js");
 
 const socket = (io) => {
+  console.log("Before Connection");
   io.on("connection", async (socket) => {
     newConnection(socket.id, socket.request.user);
-
+    console.log("after Connection", socket);
     io.emit("activeUsers", getUsers());
 
     /**
