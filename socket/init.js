@@ -15,8 +15,9 @@ const init = async (socket) => {
         path: "channels",
         model: "Channel",
         select: {
-          messages: { $slice: -1 },
+          messages: 1,
           members: 1,
+          updatedAt: 1,
         },
         populate: {
           path: "members",
@@ -28,22 +29,26 @@ const init = async (socket) => {
 
     // For each channel return a dictonary of channels
     for (id in socket.request.user.channels) {
-      let channelMembers = socket.request.user.channels[id].members;
-      chatsPayload[socket.request.user.channels[id]._id] = {
-        // Get them channels latest message
-        latestMsg: socket.request.user.channels[id].messages[0],
-        // Reassign the channel members to objects for the frontend
-        members: Object.assign(
-          {},
-          ...channelMembers.map((member) => ({
-            [member._id]: {
-              photo: member.photo,
-              username: member.username,
-              fullname: member.fullname,
-            },
-          }))
-        ),
-      };
+      if (socket.request.user.channels[id].messages.length !== 0) {
+        let channelMembers = socket.request.user.channels[id].members;
+        chatsPayload[socket.request.user.channels[id]._id] = {
+          // Get them channels latest message
+          length: socket.request.user.channels[id].messages.length,
+          latestMsg: socket.request.user.channels[id].messages.slice(-1)[0],
+          // Reassign the channel members to objects for the frontend
+          updatedAt: socket.request.user.channels[id].updatedAt,
+          members: Object.assign(
+            {},
+            ...channelMembers.map((member) => ({
+              [member._id]: {
+                photo: member.photo,
+                username: member.username,
+                fullname: member.fullname,
+              },
+            }))
+          ),
+        };
+      }
     }
   }
 

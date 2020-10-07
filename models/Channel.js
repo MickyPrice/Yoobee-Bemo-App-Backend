@@ -9,6 +9,7 @@ const ChannelSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    direct: { type: Boolean, default: false },
     messages: [
       {
         status: {
