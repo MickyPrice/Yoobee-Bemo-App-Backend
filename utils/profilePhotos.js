@@ -17,6 +17,7 @@ const uploadProfilePic = (user, file) => {
     const mimetypeExtensions = {
         'image/png': 'png',
         'image/jpeg': 'jpg',
+        'image/gif': 'gif',
     }
 
     return new Promise((resolve, reject) => {
