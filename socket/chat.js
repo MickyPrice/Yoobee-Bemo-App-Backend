@@ -1,5 +1,6 @@
 const Channel = require("../models/Channel.js");
 const { updateChannel } = require("./channel.js");
+const channel = require("./channel.js");
 
 /**
  * Create and save a new message

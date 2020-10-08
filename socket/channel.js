@@ -26,7 +26,6 @@ const updateChannel = async (io, channel) => {
 
   if (channelData) {
     const currentMemebers = getConnections(members);
-    console.log(currentMemebers)
     updateCurrentUsers(io, currentMemebers, channelData);
   }
 };
@@ -94,10 +93,39 @@ const getDirectChannel = async (io, socket, userId) => {
 
     await User.updateMany({ _id: { $in: [socket.request.user._id, userId] } }, { "$push": { "channels": newChannel._id } });
 
+    updateChannel(io, newChannel._id);
     socket.emit("openChannel", newChannel._id);
   } else {
+    updateChannel(io, channel[0]._id);
     socket.emit("openChannel", channel[0]._id);
   }
+};
+
+const currentChannel = async (socket, channel) => {
+  const channelData = await Channel.findOne(
+    { _id: channel },
+    { messages: 1, members: 1, updatedAt: 1 }
+  );
+  await channelData
+    .populate({
+      path: "members",
+      model: "User",
+      select: "username fullname picture",
+    })
+    .execPopulate();
+
+  socket.emit("currentChannel", {
+    members: Object.assign(
+      {},
+      ...channelData.members.map((member) => ({
+        [member._id]: {
+          photo: member.photo,
+          username: member.username,
+          fullname: member.fullname,
+        },
+      }))
+    ),
+  });
 };
 
 /**
@@ -129,4 +157,5 @@ module.exports = {
   updateChannel,
   createChannel,
   getDirectChannel,
+  currentChannel
 };

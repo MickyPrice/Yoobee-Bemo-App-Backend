@@ -21,6 +21,7 @@ router.post("/", function (req, res) {
 router.post("/verify", (req, res, next) => {
   passport.authenticate("passworless", (err, user, info) => {
     if (err) {
+      console.log(err);
       return next(err);
     }
     if (!user) {
@@ -28,6 +29,7 @@ router.post("/verify", (req, res, next) => {
     }
     req.logIn(user, (err) => {
       if (err) {
+        console.log(err);
         return next(err);
       }
       return res.status(200).send({success: true});
