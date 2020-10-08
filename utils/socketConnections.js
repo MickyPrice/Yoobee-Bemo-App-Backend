@@ -5,6 +5,7 @@ const newConnection = (socket, user) => {
     socketId: socket,
     username: user.username,
     img: user.picture,
+    _id: user.id
   };
 };
 
@@ -16,6 +17,7 @@ const getConnections = (ids) => {
   let connections = [];
 
   ids.forEach((user) => {
+    console.log(user)
     if (socketConnections[user]) {
       connections.push(socketConnections[user]);
     }

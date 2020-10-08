@@ -26,14 +26,20 @@ const newMessage = async (io, socket, request) => {
     msg: message,
     length: channel.messages.length
   });
-  updateChannel(io, socket, request.channel);
+
+  updateChannel(io, request.channel);
 };
 
-const getMsgs = async (io, options) => {
+const messageEmitter = Channel.watch()
+messageEmitter.on('change', change => {
+  console.log("Channel Updated");
+});
+
+const getMsgs = async (socket, options) => {
   const channel = await Channel.findById(options.channelId);
   const msgSum = await channel.messages.length
   const messages = channel.messages.splice(- options.num -20 , 20).reverse();
-  io.to(options.channelId).emit("reciveMsgs", {
+  socket.emit("reciveMsgs", {
     msgs: messages, 
     length: msgSum
 })};

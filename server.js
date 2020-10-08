@@ -15,7 +15,6 @@ const wrap = middleware => (socket, next) => middleware(socket.request, {}, next
 
 require("./socket")(io);
 
-
 // App Setup  ---------------------------------------------
 
 app.use(express.static("public"));

@@ -1,7 +1,7 @@
 // Socket.io
 const Channel = require("../models/Channel.js");
 const { init } = require("./init.js");
-const { createChannel } = require("./channel.js");
+const { createChannel, getDirectChannel } = require("./channel.js");
 const { newMessage, getMsgs } = require("./chat.js");
 
 const {
@@ -15,7 +15,6 @@ const { getUsersBeginWith } = require("./user.js");
 const socket = (io) => {
   io.on("connection", async (socket) => {
     newConnection(socket.id, socket.request.user);
-
     io.emit("activeUsers", getUsers());
 
     /**
@@ -39,6 +38,10 @@ const socket = (io) => {
       createChannel(io, socket, request);
     });
 
+    socket.on("getDirectChannel", (request) => {
+      getDirectChannel(io, socket, request);
+    });
+
     /**
      * Listen for a socket chatMessage event
      *
@@ -58,18 +61,11 @@ const socket = (io) => {
 
     socket.on("joinChannel", async (channelId) => {
       socket.join(channelId);
-
-      const channel = await Channel.findById(channelId);
-
-      io.emit("updateChannel", {
-        _id: channel._id,
-        length: channel.messages.length,
-      });
     });
 
     socket.on("getMsgs", (options) => {
-      getMsgs(io, options);
-    });
+      getMsgs(socket, options);
+    })
 
     /**
      * Listen for a socket fufillRequest event
@@ -101,8 +97,6 @@ const socket = (io) => {
     socket.on("searchUser", (query) => {
       getUsersBeginWith(io, socket, query);
     });
-
-    
 
     /**
      * Listen for a socket leaveChannel event

@@ -4,6 +4,10 @@ const router = require("express").Router();
 const loginRoute = require("./login.js")
 router.use("/login", loginRoute);
 
+// Google -----------------------------------------------------
+const GoogleRoute = require("./google.js")
+router.use("/google", GoogleRoute);
+
 // Signup ----------------------------------------------------
 const signupRoute = require("./signUp.js")
 router.use("/signup", signupRoute);
