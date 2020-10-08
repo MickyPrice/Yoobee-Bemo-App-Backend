@@ -14,7 +14,6 @@ app.io = io;
 const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
 
 require("./socket")(io);
-console.log("Required Io");
 
 // App Setup  ---------------------------------------------
 
@@ -71,12 +70,9 @@ io.use(wrap(initpassportSession));
 // Socket -------------------------------------------------
 
 io.use((socket, next) => {
-  console.log("Try Auth");
   if (socket.request.user) {
     next();
-    console.log("Auth Passed");
   } else {
-    console.log("Auth Failed");
     next(new Error('unauthorized'));
   }
 });
