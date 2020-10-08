@@ -105,8 +105,7 @@ const createTransaction = async (paymentId, sourceId) => {
  * @param {*} socket
  * @param {*} request
  */
-const createPayment = (io, socket, request) => {
-
+const createPayment = (io, socket, request, instantSend=false) => {
   if (
     (request.mode == "SEND" || request.mode == "REQUEST") && request.actor && !isNaN(request.amount)
   ) {
@@ -122,7 +121,15 @@ const createPayment = (io, socket, request) => {
       .then((data) => {
         // TODO: Send messages to appropriate channels
         console.log(data);
-        return socket.emit("paymentResponse", data._id);
+        const payload = {
+          payment: data._id,
+          destination: data.destination,
+          source: data.source
+        }
+        if(socket.request.user._id == data.source && instantSend) {
+          fufillPayment(payload.paymentId);
+        }
+        return socket.emit("paymentResponse", payload);
       })
   } else {
     console.error("Missing data");
