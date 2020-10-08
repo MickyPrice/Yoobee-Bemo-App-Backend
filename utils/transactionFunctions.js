@@ -48,7 +48,7 @@ const createTransaction = async (paymentId) => {
     source.balance = source.balance - payment.amount;
 
     // If funds are insufficient, the transfer cannot be processed
-    if (source.balance < 0) {
+    if (source.balance >= 0) {
       throw new Error(
         `You have insufficient funds to complete this transaction`
       );

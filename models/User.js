@@ -7,7 +7,9 @@ const UserSchema = new mongoose.Schema({
   pinCode: String,
   verified: Boolean,
   picture: String,
-  balance: Number,
+  balance: {
+    type: Number, default: 0
+  },
   auth: String,
   accounts: Object,
   channels: [{ type: mongoose.Types.ObjectId, ref: 'Channel' }],
