@@ -5,6 +5,8 @@ const Transaction = require("../models/Transaction.js");
 const Payment = require("../models/Payment.js");
 const mongoose = require("mongoose");
 const socket = require("./index.js");
+const Channel = require("../models/Channel.js");
+const user = require("./user.js");
 
 const createTransaction = async (paymentId, sourceId) => {
   const session = await mongoose.startSession();
@@ -135,11 +137,23 @@ const createPayment = (io, socket, request) => {
  */
 const fufillPayment = (io, socket, request) => {
   createTransaction(request.payment, socket.request.user._id)
-    .then((data) => {
+    .then(async (data) => {
       if (!data.error) {
         console.log("DATA", data);
+        // TODO: SEND DATA BACK TO USER
+        
+        const channel = await Channel.find({members: {$all:[data.destination._id, socket.request.user._id]}, direct: true});
+        if (channel == 0) {
+          const newChannel = await new Channel({members: [data.destination._id, socket.request.user._id], direct: true}).save();
+          await User.updateMany({_id: {$in: [data.destination._id, socket.request.user._id]}}, {"$push":{"channels": newChannel._id}});
+          return socket.emit("paymentFufilled", {callback: newChannel._id});
+        } else {
+          return socket.emit("paymentFufilled", {callback: channel[0]._id});
+        }
+        
       } else {
         console.log("ERROR", data.error)
+        // TODO: SEND ERROR BACK TO USER
       }
     });
   // console.log(request.payment);
