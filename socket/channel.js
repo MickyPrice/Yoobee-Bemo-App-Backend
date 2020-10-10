@@ -1,6 +1,7 @@
 const Channel = require("../models/Channel.js");
 const User = require("../models/User.js");
 const { getConnections } = require("../utils/socketConnections.js");
+const { directMessageChannel } = require("../utils/message.js")
 
 /**
  * Emit a channel update to socket
@@ -26,7 +27,6 @@ const updateChannel = async (io, channel) => {
 
   if (channelData) {
     const currentMemebers = getConnections(members);
-    console.log(currentMemebers)
     updateCurrentUsers(io, currentMemebers, channelData);
   }
 };
@@ -83,21 +83,52 @@ const updateUsers = (users, channel) => {
  * @param { String } userId
  */
 const getDirectChannel = async (io, socket, userId) => {
-  const channel = await Channel.find({ members: { $all: [userId, socket.request.user._id] }, direct: true });
+  const channel = await directMessageChannel(socket, userId);
+  socket.emit("openChannel", channel);
+  updateChannel(io, channel);
 
-  if (channel.length == 0) {
+  // if (channel.length == 0) {
 
-    const newChannel = await new Channel({
-      members: [userId, socket.request.user._id],
-      direct: true,
-    }).save();
+  //   const newChannel = await new Channel({
+  //     members: [userId, socket.request.user._id],
+  //     direct: true,
+  //   }).save();
 
-    await User.updateMany({ _id: { $in: [socket.request.user._id, userId] } }, { "$push": { "channels": newChannel._id } });
+  //   await User.updateMany({ _id: { $in: [socket.request.user._id, userId] } }, { "$push": { "channels": newChannel._id } });
 
-    socket.emit("openChannel", newChannel._id);
-  } else {
-    socket.emit("openChannel", channel[0]._id);
-  }
+  //   updateChannel(io, newChannel._id);
+  //   socket.emit("openChannel", newChannel._id);
+  // } else {
+  //   updateChannel(io, channel[0]._id);
+  //   socket.emit("openChannel", channel[0]._id);
+  // }
+};
+
+const currentChannel = async (socket, channel) => {
+  const channelData = await Channel.findOne(
+    { _id: channel },
+    { messages: 1, members: 1, updatedAt: 1 }
+  );
+  await channelData
+    .populate({
+      path: "members",
+      model: "User",
+      select: "username fullname picture",
+    })
+    .execPopulate();
+
+  socket.emit("currentChannel", {
+    members: Object.assign(
+      {},
+      ...channelData.members.map((member) => ({
+        [member._id]: {
+          photo: member.photo,
+          username: member.username,
+          fullname: member.fullname,
+        },
+      }))
+    ),
+  });
 };
 
 /**
@@ -129,4 +160,5 @@ module.exports = {
   updateChannel,
   createChannel,
   getDirectChannel,
+  currentChannel
 };

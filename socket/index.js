@@ -1,7 +1,7 @@
 // Socket.io
 const Channel = require("../models/Channel.js");
 const { init } = require("./init.js");
-const { createChannel, getDirectChannel } = require("./channel.js");
+const { createChannel, getDirectChannel, currentChannel } = require("./channel.js");
 const { newMessage, getMsgs } = require("./chat.js");
 
 const {
@@ -11,6 +11,7 @@ const {
 } = require("../utils/socketConnections.js");
 const { fufillPayment, createPayment } = require("./transaction.js");
 const { getUsersBeginWith } = require("./user.js");
+const channel = require("./channel.js");
 
 const socket = (io) => {
   io.on("connection", async (socket) => {
@@ -61,6 +62,7 @@ const socket = (io) => {
 
     socket.on("joinChannel", async (channelId) => {
       socket.join(channelId);
+      currentChannel(socket, channelId);
     });
 
     socket.on("getMsgs", (options) => {
