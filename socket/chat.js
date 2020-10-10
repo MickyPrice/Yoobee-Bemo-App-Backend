@@ -1,5 +1,6 @@
 const Channel = require("../models/Channel.js");
 const { updateChannel } = require("./channel.js");
+const { sendMsg } = require("../utils/message.js");
 
 /**
  * Create and save a new message
@@ -11,22 +12,7 @@ const { updateChannel } = require("./channel.js");
  */
 
 const newMessage = async (io, socket, request) => {
-  const channel = await Channel.findById(request.channel);
-
-  // Add current user to message object
-  let message = request.message;
-  message.author = socket.request.user._id;
-  message.createdAt = Date.now();
-
-  // Save to database for current channel
-  channel.messages.push(message);
-  await channel.save()
-
-  io.to(request.channel).emit("receiveMsg", {
-    msg: message,
-    length: channel.messages.length
-  });
-
+  await sendMsg(io, socket, request.channel, request.message);
   updateChannel(io, request.channel);
 };
 
