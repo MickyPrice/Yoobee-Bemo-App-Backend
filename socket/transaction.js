@@ -8,26 +8,31 @@ const socket = require("./index.js");
 const Channel = require("../models/Channel.js");
 const user = require("./user.js");
 
-const createTransaction = async (paymentId, sourceId) => {
+/**
+ * 
+ * @param {String} - An id to a payment in the database 
+ * @param {*} sourceId - An id for the person the money is coming from
+ */
+const createTransaction = async (paymentId, currentUser) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Get the current payment
     const payment = await Payment.findOne({
       _id: paymentId,
     }).session(session);
 
-    if (!payment) {
-      throw new Error("You must provide a vaild payment");
+    if (!payment) { // Payment not found
+      throw "Payment was not found";
     }
-    if (payment.status !== "PENDING") {
-      throw new Error(`This payment has ${payment.status}`);
+    if (payment.status !== "PENDING") { // Payment is not pending
+      throw `This payment is not pending. Payment status is ${payment.status}.`;
     }
-    if (payment.paymentType !== "BEMO") {
-      throw new Error("This payment is not a Bemo acc to acc transaction.");
+    if (payment.paymentType !== "BEMO") { // Unsupported payment type
+      throw `Unsupported payment type: ${payment.paymentType}`;
     }
 
+    // Create new trasnaction
     const transaction = await new Transaction({
       source: null,
       destination: null,
@@ -36,23 +41,21 @@ const createTransaction = async (paymentId, sourceId) => {
       amount: payment.amount,
     });
 
-    // Get the current users most uptodate balance
     const source = await User.findOne({
-      _id: sourceId,
+      _id: payment.source,
     }).session(session);
 
-    // If the user account dosent exist throw an error
+    // If the source account doesn't exist
     if (!source) {
-      throw new Error("You must be logged in to perform this action");
+      throw "The provided source account is invalid";
     }
 
+    if (JSON.stringify(source._id) !== JSON.stringify(currentUser._id)) {
+      throw "You do not have permission to make fufill transactions on behalf of that user"
+    }
+
+    // Set the transaction source to a clone of the source in the payment
     transaction.source = source;
-
-    // Update the users balance
-    source.balance = source.balance - payment.amount;
-
-    // Save the updated source into the session
-    await source.save();
 
     // Get the destination user
     const destination = await User.findOne({
@@ -60,27 +63,28 @@ const createTransaction = async (paymentId, sourceId) => {
     }).session(session);
 
     if (!destination) {
-      throw new Error("The provided destination account is invalid");
+      throw "The provided destination account is invalid";
     }
 
+    // Set the transaction destination to a clone of the destination in the payment
     transaction.destination = destination;
 
-    // Update the destination user's balance
+
+    // Ensure source has enough money to complete this transaction
     if (source.balance >= payment.amount) {
       destination.balance = destination.balance + payment.amount;
       source.balance = source.balance - payment.amount;
     } else {
-      throw new Error("You have insufficient funds to complete this transaction");
+      throw "Insufficient funds to perform this transaction";
     }
 
-    // Save the updated destination
-    await destination.save();
-
     payment.status = "RESOLVED";
-    await payment.save();
-
     transaction.status = "RESOLVED";
     transaction.payment = payment;
+
+    await source.save();
+    await destination.save();
+    await payment.save();
     await transaction.save();
 
     // Commit the current session
@@ -88,15 +92,14 @@ const createTransaction = async (paymentId, sourceId) => {
 
     return transaction;
   } catch (error) {
-    // Abort the transaction
+    // An error occurred
     await session.abortTransaction();
-    return {
-      error: error,
-    };
+    return { error: error }
   } finally {
     // End the session
     session.endSession();
   }
+
 };
 
 /**
@@ -105,7 +108,8 @@ const createTransaction = async (paymentId, sourceId) => {
  * @param {*} socket
  * @param {*} request
  */
-const createPayment = (io, socket, request, instantSend=false) => {
+
+const createPayment = (io, socket, request, instantSend = false) => {
   if (
     (request.mode == "SEND" || request.mode == "REQUEST") && request.actor && !isNaN(request.amount)
   ) {
@@ -115,56 +119,68 @@ const createPayment = (io, socket, request, instantSend=false) => {
       amount: request.amount,
       paymentType: "BEMO"
     };
-    const payment = new Payment(paymentObject);
-    payment
-      .save()
-      .then((data) => {
-        // TODO: Send messages to appropriate channels
-        console.log(data);
-        const payload = {
-          payment: data._id,
-          destination: data.destination,
-          source: data.source
+    const payment = new Payment(paymentObject); // Generate a new payment in database
+    payment.save() // Save said payment
+      .then(async (payment) => { // SUCCESSFIULLY CREATED PAYMENT
+        const payload = { // Payload to send over socket
+          payment: payment._id,
+          destination: payment.destination,
+          source: payment.source
         }
-        if(socket.request.user._id == data.source && instantSend) {
-          fufillPayment(payload.paymentId);
+        if (instantSend) { // Is it an instant fufill?
+          if (socket.request.user._id == payment.source) {
+            fufillPayment(socket, payload.payment);
+          } else {
+            // User doesn't have permission to send instant fufill from the source
+            return socket.emit("bemoerror", "You don't have permission to send an instantly fufilling payment");
+          }
         }
+        
+        
+        const channel = await Channel.find({ members: { $all: [payment.destination, payment.source] }, direct: true });
+        if (channel == 0) {
+          // No channel found. Create one
+          const newChannel = await new Channel({ members: [payment.destination, payment.source], direct: true }).save();
+          await User.updateMany({ _id: { $in: [payment.destination, payment.source] } }, { "$push": { "channels": newChannel._id } });
+          // TODO: Write to chat with payment
+          return socket.emit("redirectToChat", { channel: newChannel._id });
+        } else {
+          // Channel found. Send them to it
+          // TODO: Write to chat with payment
+          return socket.emit("redirectToChat", { channel: channel[0]._id });
+        }
+
+
         return socket.emit("paymentResponse", payload);
       })
+      .catch((e) => { // FAILED TO SAVE
+        return socket.emit("bemoerror", "Can't create payment: " + e);
+      })
   } else {
-    console.error("Missing data");
+    return socket.emit("bemoerror", "Can't create payment: Missing or incorrect data");
   }
-};
 
-/**
- *
- * @param {*} io
- * @param {*} socket
- * @param {*} request
- */
-const fufillPayment = (io, socket, request) => {
-  createTransaction(request.payment, socket.request.user._id)
-    .then(async (data) => {
+}
+
+const fufillPayment = (socket, paymentId) => {
+  createTransaction(paymentId, socket.request.user)
+    .then(async function (data) {
       if (!data.error) {
-        console.log("DATA", data);
-        // TODO: SEND DATA BACK TO USER
-        
-        const channel = await Channel.find({members: {$all:[data.destination._id, socket.request.user._id]}, direct: true});
-        if (channel == 0) {
-          const newChannel = await new Channel({members: [data.destination._id, socket.request.user._id], direct: true}).save();
-          await User.updateMany({_id: {$in: [data.destination._id, socket.request.user._id]}}, {"$push":{"channels": newChannel._id}});
-          return socket.emit("paymentFufilled", {callback: newChannel._id});
-        } else {
-          return socket.emit("paymentFufilled", {callback: channel[0]._id});
-        }
-        
+        return console.log(data)
+
+        // return socket.emit("paymentFufilled", { callback: newChannel._id });
+
       } else {
-        console.log("ERROR", data.error)
-        // TODO: SEND ERROR BACK TO USER
+        throw data.error;
       }
-    });
-  // console.log(request.payment);
-};
+    })
+    .catch(function (error) {
+      // console.log(error);
+      socket.emit("bemoerror", error);
+    })
+
+}
+
 
 module.exports = {
   fufillPayment,
