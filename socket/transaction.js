@@ -143,11 +143,11 @@ const createPayment = (io, socket, request, instantSend = false) => {
           const newChannel = await new Channel({ members: [payment.destination, payment.source], direct: true }).save();
           await User.updateMany({ _id: { $in: [payment.destination, payment.source] } }, { "$push": { "channels": newChannel._id } });
           // TODO: Write to chat with payment
-          return socket.emit("redirectToChat", { channel: newChannel._id });
+          socket.emit("redirectToChat", { channel: newChannel._id });
         } else {
           // Channel found. Send them to it
           // TODO: Write to chat with payment
-          return socket.emit("redirectToChat", { channel: channel[0]._id });
+          socket.emit("redirectToChat", { channel: channel[0]._id });
         }
 
 
