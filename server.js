@@ -35,7 +35,6 @@ require("./utils/passport.js")(passport);
 
 firebase.init();
 
-
 // Mongoose Connection ------------------------------------
 
 mongoose.connect(process.env.MONGODB_URI, {
