@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema({
   verified: Boolean,
   picture: String,
   balance: {
-    type: Number, default: 0
+    type: Number, default: 50000
   },
   auth: String,
   accounts: Object,
