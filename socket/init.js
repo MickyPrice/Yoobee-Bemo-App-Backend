@@ -1,3 +1,6 @@
+const Payment = require("../models/Payment");
+
+
 /**
  * Send the current user thier channels, user info
  * and other application data
@@ -52,7 +55,23 @@ const init = async (socket) => {
     }
   }
 
+
+  const payments = await Payment.find({ $or: [{ destination: socket.request.user._id }, { source: socket.request.user._id }] });
+  const paymentDict = await Object.assign(
+    {},
+    ...payments.map((payment) => ({
+      [payment._id]: {
+        status: payment.status,
+        source: payment.source,
+        destination: payment.destination,
+        amount: payment.amount,
+        _id: payment._id
+      },
+    }))
+  )
+
   // Emmit the channels dictonary and user info to the current user
+  socket.emit("initPayments", paymentDict);
   socket.emit("initChannels", chatsPayload);
   socket.emit("initUser", socket.request.user);
 };
