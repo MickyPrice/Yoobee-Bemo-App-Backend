@@ -84,8 +84,8 @@ const updateUsers = (users, channel) => {
  */
 const getDirectChannel = async (io, socket, userId) => {
   const channel = await directMessageChannel(socket, userId);
-  socket.emit("openChannel", channel);
   updateChannel(io, channel);
+  socket.emit("openChannel", channel);
 
   // if (channel.length == 0) {
 
