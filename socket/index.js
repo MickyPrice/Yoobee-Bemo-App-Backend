@@ -73,7 +73,6 @@ const socket = (io) => {
      * Listen for a socket fufillRequest event
      *
      * @param {object} request - payment fufillment request
-     * @typedef {{ channel: objectId, content: string, contentType: string}}
      */
 
     socket.on("fufillRequest", (request) => {

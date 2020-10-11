@@ -7,6 +7,8 @@ const mongoose = require("mongoose");
 const socket = require("./index.js");
 const Channel = require("../models/Channel.js");
 const user = require("./user.js");
+const { sendMsg, directMessageChannel } = require("../utils/message.js");
+const { updateChannel } = require("./channel.js");
 
 /**
  * 
@@ -51,7 +53,7 @@ const createTransaction = async (paymentId, currentUser) => {
     }
 
     if (JSON.stringify(source._id) !== JSON.stringify(currentUser._id)) {
-      throw "You do not have permission to make fufill transactions on behalf of that user"
+      throw "You do not have permission to fufill transactions on behalf of that user"
     }
 
     // Set the transaction source to a clone of the source in the payment
@@ -75,6 +77,7 @@ const createTransaction = async (paymentId, currentUser) => {
       destination.balance = destination.balance + payment.amount;
       source.balance = source.balance - payment.amount;
     } else {
+      payment.status = "FAILED";
       throw "Insufficient funds to perform this transaction";
     }
 
@@ -129,28 +132,19 @@ const createPayment = (io, socket, request, instantSend = false) => {
         }
         if (instantSend) { // Is it an instant fufill?
           if (socket.request.user._id == payment.source) {
-            fufillPayment(socket, payload.payment);
+            await fufillPayment(io, socket, payload.payment);
           } else {
             // User doesn't have permission to send instant fufill from the source
             return socket.emit("bemoerror", "You don't have permission to send an instantly fufilling payment");
           }
         }
         
-        
-        const channel = await Channel.find({ members: { $all: [payment.destination, payment.source] }, direct: true });
-        if (channel == 0) {
-          // No channel found. Create one
-          const newChannel = await new Channel({ members: [payment.destination, payment.source], direct: true }).save();
-          await User.updateMany({ _id: { $in: [payment.destination, payment.source] } }, { "$push": { "channels": newChannel._id } });
-          // TODO: Write to chat with payment
-          socket.emit("redirectToChat", { channel: newChannel._id });
-        } else {
-          // Channel found. Send them to it
-          // TODO: Write to chat with payment
-          socket.emit("redirectToChat", { channel: channel[0]._id });
-        }
+        const channel = await directMessageChannel(socket, request.actor);
+        await sendMsg(io, socket, channel, { channel: channel, content: payment._id, contentType: "PAYMENT" });
+        await updateChannel(io, channel);
+        socket.emit("redirectToChat", { channel: channel });
 
-
+        io.to(channel).emit("updatePayment", payment);
         return socket.emit("paymentResponse", payload);
       })
       .catch((e) => { // FAILED TO SAVE
@@ -162,11 +156,24 @@ const createPayment = (io, socket, request, instantSend = false) => {
 
 }
 
-const fufillPayment = (socket, paymentId) => {
-  createTransaction(paymentId, socket.request.user)
+const fufillPayment = async (io, socket, paymentId) => {
+  await createTransaction(paymentId, socket.request.user)
     .then(async function (data) {
       if (!data.error) {
-        return console.log(data)
+        const payment = await Payment.findOne({_id: paymentId});
+
+        if (!payment) {
+          throw "Payment not found";
+        }
+        let otherUser;
+        if(payment.source == socket.request.user._id) {
+          otherUser = payment.destination;
+        } else {
+          otherUser = payment.source;
+        }
+        const channel = await directMessageChannel(socket, otherUser);
+
+        return io.to(channel).emit("updatePayment", payment);
 
         // return socket.emit("paymentFufilled", { callback: newChannel._id });
 
@@ -175,7 +182,6 @@ const fufillPayment = (socket, paymentId) => {
       }
     })
     .catch(function (error) {
-      // console.log(error);
       socket.emit("bemoerror", error);
     })
 
