@@ -116,7 +116,6 @@ const socket = (io) => {
      */
 
     socket.on("leaveChannel", (channel) => {
-      // console.log("User Left " + channel);
       socket.leave(channel);
     });
 

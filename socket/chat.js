@@ -18,7 +18,6 @@ const newMessage = async (io, socket, request) => {
 
 const messageEmitter = Channel.watch()
 messageEmitter.on('change', change => {
-  console.log("Channel Updated");
 });
 
 const getMsgs = async (socket, options) => {
