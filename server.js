@@ -20,7 +20,7 @@ require("./socket")(io);
 app.use(express.static("public"));
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:8080',
+  origin: process.env.FRONT_END_URL,
   credentials : true
  }));
 app.use(express.urlencoded({ extended: true }));
