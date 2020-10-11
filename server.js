@@ -12,7 +12,7 @@ const fileUpload = require('express-fileupload');
 const firebase = require("./utils/firebase.js");
 app.io = io;
 const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
-
+dotenv.config();
 require("./socket")(io);
 
 // App Setup  ---------------------------------------------
@@ -25,7 +25,6 @@ app.use(cors({
  }));
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
-dotenv.config();
 const isProduction = false;
 // Passport Config
 require("./utils/passport.js")(passport);
