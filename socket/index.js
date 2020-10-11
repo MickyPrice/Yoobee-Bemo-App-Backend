@@ -73,7 +73,6 @@ const socket = (io) => {
      * Listen for a socket fufillRequest event
      *
      * @param {object} request - payment fufillment request
-     * @typedef {{ channel: objectId, content: string, contentType: string}}
      */
 
     socket.on("fufillRequest", (request) => {
@@ -81,13 +80,23 @@ const socket = (io) => {
     });
 
     /**
-     * Listen for a socket chatMessage event
+     * Listen for a socket payment event
      *
-     * @param {object} request - chat message object
+     * @param {object} request
      */
 
     socket.on("payment", (request) => {
       createPayment(io, socket, request);
+    });
+
+    /**
+     * Listen for a socket instantPayment event (a payment from the source that will be paid instantly)
+     *
+     * @param {object} request 
+     */
+
+    socket.on("instantPayment", (request) => {
+      createPayment(io, socket, request, true);
     });
 
     /**
