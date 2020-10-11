@@ -27,6 +27,8 @@
     "express-fileupload": "^1.2.0",
     "express-session": "^1.17.1",
     "firebase-admin": "^9.2.0",
+    "fs": "0.0.1-security",
+    "https": "^1.0.0",
     "imagemin": "^7.0.1",
     "imagemin-jpegtran": "^7.0.0",
     "imagemin-pngquant": "^9.0.1",
