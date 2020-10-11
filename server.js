@@ -12,7 +12,7 @@ const fileUpload = require('express-fileupload');
 const firebase = require("./utils/firebase.js");
 app.io = io;
 const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
-
+dotenv.config();
 require("./socket")(io);
 
 // App Setup  ---------------------------------------------
@@ -20,12 +20,11 @@ require("./socket")(io);
 app.use(express.static("public"));
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:8080',
+  origin: process.env.FRONT_END_URL,
   credentials : true
  }));
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
-dotenv.config();
 const isProduction = false;
 // Passport Config
 require("./utils/passport.js")(passport);
