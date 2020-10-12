@@ -16,10 +16,6 @@ const newMessage = async (io, socket, request) => {
   updateChannel(io, request.channel);
 };
 
-const messageEmitter = Channel.watch()
-messageEmitter.on('change', change => {
-});
-
 const getMsgs = async (socket, options) => {
   const channel = await Channel.findById(options.channelId);
   const msgSum = await channel.messages.length

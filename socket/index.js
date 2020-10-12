@@ -1,7 +1,13 @@
 // Socket.io
-const Channel = require("../models/Channel.js");
+const User = require("../models/User.js");
+const userEmitter = User.watch();
 const { init } = require("./init.js");
-const { createChannel, getDirectChannel, currentChannel } = require("./channel.js");
+const {
+  createChannel,
+  getDirectChannel,
+  currentChannel,
+  getChannel,
+} = require("./channel.js");
 const { newMessage, getMsgs } = require("./chat.js");
 
 const {
@@ -54,6 +60,16 @@ const socket = (io) => {
       newMessage(io, socket, request);
     });
 
+    socket.on("getChannel", (channel) => {
+      getChannel(socket, channel);
+    });
+
+    userEmitter.on("change", (change) => {
+      if (JSON.stringify(socket.request.user._id) == JSON.stringify(change.documentKey._id)) {
+        socket.emit("updateUser", socket.request.user);
+      }
+    });
+
     /**
      * Listen for a socket joinChanel event
      *
@@ -67,7 +83,7 @@ const socket = (io) => {
 
     socket.on("getMsgs", (options) => {
       getMsgs(socket, options);
-    })
+    });
 
     /**
      * Listen for a socket fufillRequest event
@@ -92,7 +108,7 @@ const socket = (io) => {
     /**
      * Listen for a socket instantPayment event (a payment from the source that will be paid instantly)
      *
-     * @param {object} request 
+     * @param {object} request
      */
 
     socket.on("instantPayment", (request) => {
