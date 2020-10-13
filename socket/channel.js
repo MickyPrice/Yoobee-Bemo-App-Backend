@@ -1,7 +1,7 @@
 const Channel = require("../models/Channel.js");
 const User = require("../models/User.js");
 const { getConnections } = require("../utils/socketConnections.js");
-const { directMessageChannel } = require("../utils/message.js")
+const { directMessageChannel } = require("../utils/message.js");
 
 /**
  * Emit a channel update to socket
@@ -86,22 +86,39 @@ const getDirectChannel = async (io, socket, userId) => {
   const channel = await directMessageChannel(socket, userId);
   updateChannel(io, channel);
   socket.emit("openChannel", channel);
+};
 
-  // if (channel.length == 0) {
+const getChannel = async (socket, channelId) => {
+  const channel = await Channel.findOne(
+    { _id: channelId },
+    { messages: 1, members: 1, updatedAt: 1 }
+  );
+  await channel
+    .populate({
+      path: "members",
+      model: "User",
+      select: "username fullname picture",
+    })
+    .execPopulate();
 
-  //   const newChannel = await new Channel({
-  //     members: [userId, socket.request.user._id],
-  //     direct: true,
-  //   }).save();
-
-  //   await User.updateMany({ _id: { $in: [socket.request.user._id, userId] } }, { "$push": { "channels": newChannel._id } });
-
-  //   updateChannel(io, newChannel._id);
-  //   socket.emit("openChannel", newChannel._id);
-  // } else {
-  //   updateChannel(io, channel[0]._id);
-  //   socket.emit("openChannel", channel[0]._id);
-  // }
+  socket.emit("updateChannel", {
+    id: channel._id,
+    data: {
+      length: channel.messages.length,
+      latestMsg: channel.messages.slice(-1)[0],
+      updatedAt: channel.updatedAt,
+      members: Object.assign(
+        {},
+        ...channel.members.map((member) => ({
+          [member._id]: {
+            photo: member.photo,
+            username: member.username,
+            fullname: member.fullname,
+          },
+        }))
+      ),
+    },
+  });
 };
 
 const currentChannel = async (socket, channel) => {
@@ -160,5 +177,6 @@ module.exports = {
   updateChannel,
   createChannel,
   getDirectChannel,
-  currentChannel
+  currentChannel,
+  getChannel
 };
