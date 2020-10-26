@@ -17,6 +17,7 @@ FIREBASE_APP_ID=
 SESSION_SECRET=<Whatever you want>
 TWILIO_API_KEY=
 MONGODB_URI=
+FRONT_END_URL=<url to your frontend, eg, http://localhost:8080>
 ```
  
 It will be explained what to put into each of these variables later in the document.
