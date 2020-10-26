@@ -1,3 +1,5 @@
+const User = require("../models/User.js");
+
 let socketConnections = {};
 
 const newConnection = (socket, user) => {
@@ -7,10 +9,18 @@ const newConnection = (socket, user) => {
     img: user.picture,
     _id: user.id
   };
+
+  User.findOneAndUpdate({ _id: user.id }, { online: true }, {
+    returnOriginal: false
+  });
 };
 
-const destroyConnection = (socket) => {
-  delete socketConnections[socket];
+const destroyConnection = async (socket, user) => {
+  await User.findOneAndUpdate({ _id: user }, { online: false }, {
+    returnOriginal: false
+  });
+
+  delete socketConnections[user];
 };
 
 const getConnections = (ids) => {

@@ -22,7 +22,7 @@ const channel = require("./channel.js");
 const socket = (io) => {
   io.on("connection", async (socket) => {
     newConnection(socket.id, socket.request.user);
-    io.emit("activeUsers", getUsers());
+    // io.emit("activeUsers", getUsers());
 
     /**
      * Init to the new socket with the users application data
@@ -65,6 +65,8 @@ const socket = (io) => {
     });
 
     userEmitter.on("change", (change) => {
+      io.emit("activeUsers", getUsers());
+
       if (JSON.stringify(socket.request.user._id) == JSON.stringify(change.documentKey._id)) {
         socket.emit("updateUser", socket.request.user);
       }
@@ -140,7 +142,7 @@ const socket = (io) => {
      */
 
     socket.on("disconnect", () => {
-      destroyConnection(socket._id, socket.request.user._id);
+      destroyConnection(socket.id, socket.request.user._id);
     });
   });
 };
